@@ -6,8 +6,6 @@ import tiktoken
 import os
 import openai
 import pandas as pd
-import biorxiv_retriever as bx
-from semanticscholar import SemanticScholar
 from sklearn.metrics.pairwise import cosine_similarity
 import json
 openai.api_key = os.getenv("OPENAI_API_KEY")
