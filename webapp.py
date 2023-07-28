@@ -9,7 +9,7 @@ app = FastAPI()
 
 def load_articles_from_csv():
     articles = []
-    with open('summary_embeddings.csv', newline='') as csvfile:
+    with open('summary_embeddings.csv', newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             summary = row['summary']

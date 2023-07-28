@@ -9,7 +9,7 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 import json
 openai.api_key = os.getenv("OPENAI_API_KEY")
-#s2_api_key = "x7MJ5zku5R5XL9Jj5wqbZ3aJTiy1hT7z63Un28W1"
+
 
 def count_tokens(text):
     encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -57,7 +57,7 @@ def summarize_article(text):
         stream=True,
         max_tokens=1000,
         messages=[
-            {"role": "system", "content": "You are a helpful assistant which summarizes scientific papers in an easy and understandable concise way. your goal is to create a summary, create up to 10 bullet points about the most important things about the paper and upt t0 10 relevant keywords."},
+            {"role": "system", "content": "You are a helpful assistant which summarizes scientific papers in an easy and understandable concise way. your goal is to create a summary, create up to 10 bullet points about the most important things about the paper."},
             {"role": "user", "content": f"Please return a summary the following text and extract up to 10 bullet points and 10 relevant keywords: {text}"}
         ]
     )
@@ -119,11 +119,9 @@ def main(keyword, n, save_directory,year):
     create_directory(save_directory)
     saved_filenames = set(os.listdir(save_directory))
   
-    #sch = SemanticScholar(api_key=s2_api_key)
-    #print(keyword)
-    results = search_semantic_scholar(keyword,year,100)
+    results = search_semantic_scholar(keyword,year,n)
     print(results)
-     
+    print(results['url'].to_string()  ) 
     df_old = pd.DataFrame()
     # if csv file exists, read it in
     if os.path.exists("summary_embeddings.csv"):
@@ -131,6 +129,7 @@ def main(keyword, n, save_directory,year):
 
     df_new = pd.DataFrame(columns=["title", "summary", "url", "embedding","publicationDate","AISummaryAvailable"])
     i=0
+    
     for ind in results.index:
         title = results['title'][ind]
         abstract = results['abstract'][ind]
@@ -139,8 +138,9 @@ def main(keyword, n, save_directory,year):
         tldr = results['tldr.text'][ind]
         isOpenAccess = results['isOpenAccess'][ind]
         publicationDate = results['publicationDate'][ind]
+        print("Title: "+title)
+        print("URL: "+url)
         
-
 
 
         filename = sanitize_filename(title) + ".txt"
@@ -150,7 +150,7 @@ def main(keyword, n, save_directory,year):
         
         try:
             #If article is open access, with a condition to catch non-readable PDFs (in which case use abstract instead)
-            if isOpenAccess == False or openAccessPdf == None:
+            if isOpenAccess == False or openAccessPdf == None or openAccessPdf=='':
                 text = tldr
             else:
                 text = download_article_pdf(openAccessPdf)
@@ -165,8 +165,8 @@ def main(keyword, n, save_directory,year):
             summary = summarize_article(text)
             embedding = get_embedding(summary)
             # append each new article to the df_new dataframe
-            if result.openAccessPdf['url']==None:
-                df_new = df_new.append({"title": title, "summary": summary, "url": str(url), "embedding": embedding,"publicationDate": publicationDate, "AISummaryAvailable": 0}, ignore_index=True)
+            if openAccessPdf==None or openAccessPdf=='' or isOpenAccess == False:
+                df_new = df_new.append({"title": title, "summary": summary, "url": url, "embedding": embedding,"publicationDate": publicationDate, "AISummaryAvailable": 0}, ignore_index=True)
             else: 
                 df_new = df_new.append({"title": title, "summary": summary, "url": openAccessPdf, "embedding": embedding,"publicationDate": publicationDate, "AISummaryAvailable": 1}, ignore_index=True)
             print(f"\nSummary of article {i+1}:\n{summary}\n")
@@ -184,13 +184,12 @@ def main(keyword, n, save_directory,year):
             else:
                 text=str(title)
 
-            print('Text',text)
             save_path = os.path.join(save_directory, filename)
             save_article(save_path, text)
             summary = text
             embedding = get_embedding(summary)
             # append each new article to the df_new dataframe
-            df_new = df_new.append({"title": title, "summary": summary, "url": str(url), "embedding": embedding,"publicationDate": publicationDate,"AISummaryAvailable":0}, ignore_index=True)
+            df_new = df_new.append({"title": title, "summary": summary, "url": url, "embedding": embedding,"publicationDate": publicationDate,"AISummaryAvailable":0}, ignore_index=True)
             print(f"\nSummary of article {i+1}:\n{summary}\n")
             summary_filename = filename.replace(".txt", "_summary.txt")
             summary_save_path = os.path.join(save_directory, summary_filename)
