@@ -8,8 +8,8 @@ Publication dashboard powered by LLM model to summarize papers for a given keywo
 - Publications which do not have open access have abstract summaries generated instead
 
 
-
-To run use uvicorn webapp:app --host 127.0.0.1 --port 8000
+To install the dependencies run pip install -r requirements.txt 
+To run use uvicorn webapp:app --host 127.0.0.1 --port 8000 to run locally or modify port and host to suit your needs
 
 webapp.py runs the website
 main_embed.py is called from webapp.py to perform pull down of papers and embedding into GPT3.5 tokens
