@@ -205,7 +205,7 @@ def main(keyword, n, save_directory,year):
     df_combined.to_csv("summary_embeddings.csv", index=False)
 
 
-
+#only used for ML
 if __name__ == "__main__":
     keyword = "HER3 ErBb3"
     year = str(2023)
