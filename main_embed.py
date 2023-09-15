@@ -8,8 +8,31 @@ import openai
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 import json
+from langchain.text_splitter import CharacterTextSplitter
+import sentence_transformers
+from langchain.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings
+from langchain.vectorstores import Chroma
+from langchain.chat_models import ChatOpenAI
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
+from langchain.llms import HuggingFaceHub
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+def get_text_chunks(raw_texts):
+    text_splitter = CharacterTextSplitter(separator="\n",
+                                          chunk_size=1000,
+                                          chunk_overlap=200,
+                                          length_function=len)
+    chunks = text_splitter.split_text(raw_texts)
+    return chunks
+    # chunk size -> how many characters in each chunk
+    # chunk overlap -> how many characters the next chunk will be negatively offset
+    # separator -> 
+
+def get_vectorstore(text_chunks):
+    embedding_model = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
+    vectorstore = Chroma.from_texts(texts=text_chunks, embedding=embedding_model) #not persistent
+    return vectorstore
 
 def count_tokens(text):
     encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
@@ -52,6 +75,8 @@ def summarize_article(text):
         firsttext = text[:7500] # Get first 7500 tokens
         lasttext = text[7500:] # Get last 7500 tokens
         text = firsttext + lasttext # Concatenate first 7500 tokens with first 7500 tokens of last 7500 tokens
+    
+    #maybe use hugging face + lang chain
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-16k-0613",
         stream=True,
@@ -77,11 +102,6 @@ def get_embedding(text):
     )
     return response["data"][0]["embedding"]
 
-def search_similar_articles(query, df):
-    query_embedding = get_embedding(query)
-    similarities = cosine_similarity([query_embedding], df["embedding"].tolist())
-    top_index = similarities[0].argmax()
-    return df.iloc[top_index]
 
 def search_semantic_scholar(query,year,n=100):
     current_index = 0
@@ -113,15 +133,13 @@ def search_semantic_scholar(query,year,n=100):
         print('Current index: ',current_index)
     return final_results
 
-
-
 def main(keyword, n, save_directory,year):
     create_directory(save_directory)
     saved_filenames = set(os.listdir(save_directory))
   
-    results = search_semantic_scholar(keyword,year,n)
+    results = search_semantic_scholar(keyword,year,n) #a dataframe
     print(results)
-    print(results['url'].to_string()  ) 
+    print(results['url'].to_string()) 
     df_old = pd.DataFrame()
     # if csv file exists, read it in
     if os.path.exists("summary_embeddings.csv"):
@@ -140,8 +158,6 @@ def main(keyword, n, save_directory,year):
         publicationDate = results['publicationDate'][ind]
         print("Title: "+title)
         print("URL: "+url)
-        
-
 
         filename = sanitize_filename(title) + ".txt"
         if filename in saved_filenames:
@@ -174,6 +190,7 @@ def main(keyword, n, save_directory,year):
             summary_save_path = os.path.join(save_directory, summary_filename)
             save_article(summary_save_path, summary)
             i=i+1
+
         except Exception as e:
             #If article is NOT open access, use abstract instead
             print('Could not load article, defaulting to using abstract')
