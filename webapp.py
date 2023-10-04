@@ -34,7 +34,7 @@ def my_task():
     n = 100
     save_directory = "saved_articles"
     year=str(2023)
-    main_embed.main(keyword, n, save_directory,year)
+    #main_embed.main(keyword, n, save_directory,year)
     print("Paper retrieval task completed")
 
 @app.on_event("startup")

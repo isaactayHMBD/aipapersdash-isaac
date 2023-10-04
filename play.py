@@ -28,7 +28,7 @@ load_dotenv()
 loader = CSVLoader(file_path='key_points.csv', csv_args={
     'delimiter': ',',
     'quotechar': '"',
-    'fieldnames': ['abstract', 'keypoints', 'target']
+    'fieldnames': ['target/program', 'title', 'abstract', 'keypoints']
 })
 documents = loader.load()
 embeddings = OpenAIEmbeddings()
@@ -36,31 +36,32 @@ db = Chroma.from_documents(documents, embeddings)
 
 def retrieve_info(query):
     response = db.similarity_search(query, 
-                                    k=3) #retrieves top 3
+                                    k=2) #retrieves top 2
     contents = [doc.page_content for doc in response]
     return contents
 
 llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-16k-0613")
 
 template = """
-You are an expert summarizer on breast cancer research papers. I am going to share with you an abstract of an academic paper
-and you will give me a summarization of the most relevant information in 10 bullet points or less, based on past
-summaries. The past summaries are 
+You are an expert summarizer on breast cancer and genomic research papers. I will share with you an abstract of an academic paper
+and you will give me key points that I am interested in, which are based on past examples. Key points will be in 10 or less bullet points.
+
 You will follow all the rules below: 
-
-1/ You must identify and know what the protein receptors (targets) do.
-2/ Response must be similar to past summaries, in terms of length, and tone of voice. Summary should also mention what the targets are doing.
-3/ You must list all the Programs (ADC) and targets (HER3/ErbB3, etc.) that the paper has mentioned, after the bullet points are formed
-4/ If the summaries are found to be irrelevant to the abstract, or if new information is found in the abstract, please mention the new information in the bullet points
-
+- Identify and know what are the cancer therapeutic targets acronyms, and what each one does. This will be your context. You do not need to mention it in the bullet points.
+- Response must be similar to past summaries, mentioning what the targets are doing, pros and cons, new findings/discoveries,
+how the therapeutic targets interact with other targets.
+- If new information is found in the abstract when compared to the summary, please mention the new information from the abstract in the bullet points.
+- Bullet points should only include information from the abstract.
+- Do not paraphrase too much. Bullet points must not repeat.
+- You must list all the therapeutic targets (HER3/ErbB3, etc.) that the paper has mentioned, after the bullet points are formed.
 
 Below is the abstract of an academic paper on cancer: 
 {message}
 
-Here is a list of how the summaries would be like for a similar paper: 
+Here are some key points that I will be interested in, that might be in the paper: 
 {summary}
 
-Please write the summary for the abstract.
+Please pick out the key points from the abstract.
 """
 
 prompt = PromptTemplate(
@@ -70,6 +71,7 @@ prompt = PromptTemplate(
 )
 chain = LLMChain(llm=llm, prompt=prompt)
 
+#not in use yet
 def load_pdf():
     text=""
     loader = PyPDFDirectoryLoader(".", glob="**/[!.]*.pdf")
@@ -77,6 +79,7 @@ def load_pdf():
        text+=page.page_content
     return text
 
+#generate a response based on similarit
 def generate_response(message):
     summary=retrieve_info(message)
     response = chain.run(message=message, summary=summary)
@@ -85,9 +88,8 @@ def generate_response(message):
 
 message = """
 Article
-Head and neck squamous cell carcinoma (HNSCC) is the sixth most common cancer type, has often an aggressive course and is poorly responsive to current therapeutic approaches, so that 5-year survival rates for patients diagnosed with advanced disease is lower than 50%. The Epidermal Growth Factor Receptor (EGFR) has emerged as an established oncogene in HNSCC. Indeed, although HNSCCs are a heterogeneous group of cancers which differ for histological, molecular and clinical features, EGFR is overexpressed or mutated in a percentage of cases up to about 90%. Moreover, aberrant expression of the other members of the ErbB receptor family, ErbB2, ErbB3 and ErbB4, has also been reported in variable proportions of HNSCCs. Therefore, an increased expression/activity of one or multiple ErbB receptors is found in the vast majority of patients with HNSCC. While aberrant ErbB signaling has long been known to play a critical role in tumor growth, angiogenesis, invasion, metastatization and resistance to therapy, more recent evidence has revealed its impact on other features of cancer cells' biology, such as the ability to evade antitumor immunity. In this paper we will review recent findings on how ErbB receptors expression and activity, including that associated with non-canonical signaling mechanisms, impacts on prognosis and therapy of HNSCC.
-
-“ErbB3 appears to play different roles in HNSCC progression depending on its membranous/cytoplasmic vs. nuclear localization. Unlike nuclear EGFR, localization of ErbB3 and ErbB4 in the nucleus of HNSCC cells appears associated with a more favorable prognosis. EGFR-positive laryngeal tumors co-expressing nuclear ErbB3 had a better prognosis as compared to those that expressed EGFR without ErbB3 or in association with cytoplasmic ErbB3. Moreover, based on the observation that ErbB3 was never expressed alone, but always co-expressed with ErbB2, both in the presence and absence of EGFR, the authors of these studies speculated that ErbB3 nuclear localization may play a favorable role by preventing the formation of ErbB heterodimers at the cell membrane and the ensuing activation of pro-tumoral downstream signaling pathways.”
+Limited treatment options exist for EGFR-mutated NSCLC that has progressed after EGFR TKI and platinum-based chemotherapy. HER3 is highly expressed in EGFR-mutated NSCLC, and its expression is associated with poor prognosis in some patients. Patritumab deruxtecan (HER3-DXd) is an investigational, potential first-in-class, HER3-directed antibody–drug conjugate consisting of a HER3 antibody attached to a topoisomerase I inhibitor payload via a tetrapeptide-based cleavable linker. In an ongoing phase I study, HER3-DXd demonstrated promising antitumor activity and a tolerable safety profile in patients with EGFR-mutated NSCLC, with or without identified EGFR TKI resistance mechanisms, providing proof of concept of HER3-DXd. HERTHENA-Lung01 is a global, registrational, phase II trial further evaluating HER3-DXd in previously treated advanced EGFR-mutated NSCLC.
+“In the ongoing phase I U31402-A-U102 trial, HER3-DXd 5.6 mg/kg demonstrated promising antitumor efficacy across a broad range of HER3 expression and a tolerable safety profile in heavily pretreated patients with EGFR-mutated NSCLC (N = 57).”
 
 """
 generate_response(message) 
