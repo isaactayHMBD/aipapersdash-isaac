@@ -25,6 +25,8 @@ import getpass
 
 load_dotenv()
 
+#embeddings! for similarity search
+#key_points.csv is the collected data 
 loader = CSVLoader(file_path='key_points.csv', csv_args={
     'delimiter': ',',
     'quotechar': '"',
@@ -79,20 +81,15 @@ def load_pdf():
        text+=page.page_content
     return text
 
-#generate a response based on similarit
+
 def generate_response(message):
+    '''
+    generate a response based on similarity search
+    '''
     summary=retrieve_info(message)
     response = chain.run(message=message, summary=summary)
     print(response)
     return response
-
-message = """
-Article
-Limited treatment options exist for EGFR-mutated NSCLC that has progressed after EGFR TKI and platinum-based chemotherapy. HER3 is highly expressed in EGFR-mutated NSCLC, and its expression is associated with poor prognosis in some patients. Patritumab deruxtecan (HER3-DXd) is an investigational, potential first-in-class, HER3-directed antibody–drug conjugate consisting of a HER3 antibody attached to a topoisomerase I inhibitor payload via a tetrapeptide-based cleavable linker. In an ongoing phase I study, HER3-DXd demonstrated promising antitumor activity and a tolerable safety profile in patients with EGFR-mutated NSCLC, with or without identified EGFR TKI resistance mechanisms, providing proof of concept of HER3-DXd. HERTHENA-Lung01 is a global, registrational, phase II trial further evaluating HER3-DXd in previously treated advanced EGFR-mutated NSCLC.
-“In the ongoing phase I U31402-A-U102 trial, HER3-DXd 5.6 mg/kg demonstrated promising antitumor efficacy across a broad range of HER3 expression and a tolerable safety profile in heavily pretreated patients with EGFR-mutated NSCLC (N = 57).”
-
-"""
-generate_response(message) 
 
 def get_text_chunks(raw_texts):
     text_splitter = CharacterTextSplitter(separator="\n",
@@ -115,6 +112,17 @@ def sanitize_article_text(text):
     if references_index != -1:
         text = text[:references_index]
     return text
+
+#test usecase.
+
+if __name__ == "__main__":
+    message = """
+    Article
+    Limited treatment options exist for EGFR-mutated NSCLC that has progressed after EGFR TKI and platinum-based chemotherapy. HER3 is highly expressed in EGFR-mutated NSCLC, and its expression is associated with poor prognosis in some patients. Patritumab deruxtecan (HER3-DXd) is an investigational, potential first-in-class, HER3-directed antibody–drug conjugate consisting of a HER3 antibody attached to a topoisomerase I inhibitor payload via a tetrapeptide-based cleavable linker. In an ongoing phase I study, HER3-DXd demonstrated promising antitumor activity and a tolerable safety profile in patients with EGFR-mutated NSCLC, with or without identified EGFR TKI resistance mechanisms, providing proof of concept of HER3-DXd. HERTHENA-Lung01 is a global, registrational, phase II trial further evaluating HER3-DXd in previously treated advanced EGFR-mutated NSCLC.
+    “In the ongoing phase I U31402-A-U102 trial, HER3-DXd 5.6 mg/kg demonstrated promising antitumor efficacy across a broad range of HER3 expression and a tolerable safety profile in heavily pretreated patients with EGFR-mutated NSCLC (N = 57).”
+
+    """
+    generate_response(message) 
 
 # from langchain.document_loaders import OnlinePDFLoader 
 # loader = PyPDFDirectoryLoader(".", glob="**/[!.]*.pdf")

@@ -76,7 +76,7 @@ def summarize_article(text):
         lasttext = text[7500:] # Get last 7500 tokens
         text = firsttext + lasttext # Concatenate first 7500 tokens with first 7500 tokens of last 7500 tokens
     
-    #maybe use hugging face + lang chain
+    
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-16k-0613",
         stream=True,
